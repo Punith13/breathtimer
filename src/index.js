@@ -33,7 +33,7 @@ function Breathingrings() {
 
     // Glow effect: Intensity fluctuates with breathing
     const t = (1 + Math.sin(state.clock.elapsedTime * 2)) / 2;
-    const glowColor = breathingIn ? [0, 0, 10 + t * 50] : [10 + t * 50, 0, 0];
+    const glowColor = breathingIn ? [0, 0, 30 + t * 50] : [10 + t * 50, 0, 0];
     tubeMaterial.current.emissive.setRGB(...glowColor);
   });
 
