@@ -1,8 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Cylinder, Torus } from "@react-three/drei";
-import { Physics, usePlane, useBox } from "@react-three/cannon";
+import { Physics } from "@react-three/cannon";
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import "./styles.css";
 
 const numRings = 10; // Number of rings along the tube
@@ -10,38 +11,11 @@ const inhaleDuration = 4; // In seconds
 const exhaleDuration = 8; // Out seconds
 const totalDuration = inhaleDuration + exhaleDuration;
 
-function Box() {
-  const [ref, api] = useBox(() => ({ mass: 1, position: [0, 2, 0] }));
-  return (
-    <mesh
-      onClick={() => {
-        api.velocity.set(0, 2, 0);
-      }}
-      ref={ref}
-      position={[0, 2, 0]}
-    >
-      <boxBufferGeometry attach="geometry" />
-      <meshLambertMaterial attach="material" color="hotpink" />
-    </mesh>
-  );
-}
-
-function Plane() {
-  const [ref] = usePlane(() => ({
-    rotation: [-Math.PI / 2, 0, 0],
-  }));
-  return (
-    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeBufferGeometry attach="geometry" args={[100, 100]} />
-      <meshLambertMaterial attach="material" color="lightblue" />
-    </mesh>
-  );
-}
-
 function Breathingrings() {
   const [breathingIn, setBreathingIn] = useState(true);
   const [progress, setProgress] = useState(0);
   const elapsedRef = useRef(0);
+  const tubeMaterial = useRef();
 
   useFrame((state, delta) => {
     elapsedRef.current += delta;
@@ -56,10 +30,27 @@ function Breathingrings() {
     }
 
     setProgress(breathingIn ? normalizedTime : 1 - normalizedTime);
+
+    // Glow effect: Intensity fluctuates with breathing
+    const t = (1 + Math.sin(state.clock.elapsedTime * 2)) / 2;
+    const glowColor = breathingIn ? [0, 0, 10 + t * 50] : [10 + t * 50, 0, 0];
+    tubeMaterial.current.emissive.setRGB(...glowColor);
   });
 
   return (
     <>
+      {/* Glowing Tube */}
+      <Cylinder args={[1, 1, 5, 32]} position={[0, 0, 0]}>
+        <meshStandardMaterial
+          ref={tubeMaterial}
+          emissiveIntensity={1}
+          emissive="blue"
+          transparent
+          opacity={0.5}
+          toneMapped={false}
+        />
+      </Cylinder>
+
       {/* Rings that light up sequentially */}
       {[...Array(numRings)].map((_, i) => {
         const ringProgress = i / (numRings - 1); // Normalize ring position
@@ -91,18 +82,24 @@ createRoot(document.getElementById("root")).render(
       radius={150}
       depth={50}
       count={5000}
-      factor={6}
+      factor={2}
       saturation={9}
       speed={1}
     />
-    <ambientLight intensity={0.5} />
+    <ambientLight intensity={2} />
     <spotLight position={[10, 15, 10]} angle={0.3} />
     <pointLight position={[10, 10, 10]} />
     <Physics>
-      <Cylinder args={[1, 1, 5, 16]} position={[0, 0, 0]}>
-        <meshStandardMaterial transparent opacity={0.1} color="gold" />
-      </Cylinder>
       <Breathingrings />
     </Physics>
+
+    <EffectComposer>
+      <Bloom
+        mipmapBlur={false}
+        luminanceThreshold={1}
+        luminanceSmoothing={0.5}
+        intensity={1.2}
+      />
+    </EffectComposer>
   </Canvas>
 );
