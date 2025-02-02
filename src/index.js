@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars, Cylinder, Torus } from "@react-three/drei";
+import { OrbitControls, Stars, Cylinder, Torus, Html } from "@react-three/drei";
 import { Physics } from "@react-three/cannon";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import "./styles.css";
@@ -50,6 +50,23 @@ function Breathingrings() {
           toneMapped={false}
         />
       </Cylinder>
+
+      {/* Breathing Text */}
+      <Html position={[0, 4, 0]} center>
+        <div
+          style={{
+            fontSize: "2rem",
+            fontWeight: "bold",
+            color: "white",
+            backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+            padding: "10px 20px",
+            width: "250px",
+            borderRadius: "10px",
+          }}
+        >
+          {breathingIn ? "Breathe In" : "Breathe Out"}
+        </div>
+      </Html>
 
       {/* Rings that light up sequentially */}
       {[...Array(numRings)].map((_, i) => {
