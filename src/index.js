@@ -34,12 +34,12 @@ function BreathingTube({ breathingIn }) {
   );
 }
 
-function BreathingText({ breathingIn }) {
+function BreathingText({ breathingIn, isMobile }) {
   return (
-    <Html position={[0, 4, 0]} center>
+    <Html position={[isMobile ? 0.9 : 0, 3.5, 0]} center>
       <div
         style={{
-          fontSize: "2rem",
+          fontSize: isMobile ? "1.2rem" : "2rem",
           fontWeight: "bold",
           color: "white",
           backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -80,7 +80,7 @@ function Rings({ breathingIn, progress }) {
   );
 }
 
-function Timer({ remainingTime }) {
+function Timer({ remainingTime, isMobile }) {
   return (
     <Html position={[-0.2, 5, 0]} center>
       <div
@@ -88,7 +88,7 @@ function Timer({ remainingTime }) {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          fontSize: "1.5rem",
+          fontSize: isMobile ? "1rem" : "1.5rem",
           fontWeight: "bold",
           color: "white",
           backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -111,7 +111,7 @@ function Timer({ remainingTime }) {
             cy="50"
             r="45"
             stroke="white"
-            strokeWidth="5"
+            strokeWidth={isMobile ? "7" : "5"}
             fill="none"
             strokeDasharray="282.7"
             strokeDashoffset={(remainingTime / totalBreathTime) * 282.7}
@@ -132,6 +132,23 @@ function Breathingrings({ isRunning, setIsRunning }) {
   const [progress, setProgress] = useState(0);
   const [remainingTime, setRemainingTime] = useState(totalBreathTime);
   const elapsedRef = useRef(0);
+
+  const [isMobile, setIsMobile] = useState(false); // Mobile detection state
+
+  // Detect if the user is on a mobile screen
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        // Mobile threshold
+        setIsMobile(true);
+      } else {
+        setIsMobile(false);
+      }
+    };
+    handleResize(); // Initial check
+    window.addEventListener("resize", handleResize); // Event listener for resizing
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useFrame((_, delta) => {
     if (!isRunning || remainingTime <= 0) return;
@@ -160,8 +177,10 @@ function Breathingrings({ isRunning, setIsRunning }) {
     <>
       {isRunning && <BreathingTube breathingIn={breathingIn} />}
       {isRunning && <Rings breathingIn={breathingIn} progress={progress} />}
-      {isRunning && <BreathingText breathingIn={breathingIn} />}
-      {isRunning && <Timer remainingTime={remainingTime} />}
+      {isRunning && (
+        <BreathingText breathingIn={breathingIn} isMobile={isMobile} />
+      )}
+      {isRunning && <Timer remainingTime={remainingTime} isMobile={isMobile} />}
       {!isRunning && (
         <Html position={[0, 0, 0]} center>
           <button
