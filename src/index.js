@@ -82,7 +82,7 @@ function Rings({ breathingIn, progress }) {
 
 function Timer({ remainingTime, isMobile }) {
   return (
-    <Html position={[-0.2, 5, 0]} center>
+    <Html position={[isMobile ? 0 : -0.2, 5, 0]} center>
       <div
         style={{
           display: "flex",
