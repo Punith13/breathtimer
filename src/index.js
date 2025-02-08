@@ -6,7 +6,6 @@ import { Physics } from "@react-three/cannon";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import "./styles.css";
 
-const numRings = 10;
 const inhaleDuration = 4; // Seconds
 const exhaleDuration = 8;
 const totalBreathTime = 5 * 60; // 5 minutes
@@ -55,13 +54,17 @@ function BreathingText({ breathingIn, isMobile }) {
 }
 
 function Rings({ breathingIn, progress }) {
+  const numRings = breathingIn ? 6 : 10; // Total rings (2 extra neutral rings)
+  const glowingRings = breathingIn ? 4 : 8; // Inner rings that glow
+
   return (
     <>
       {[...Array(numRings)].map((_, i) => {
         const ringProgress = i / (numRings - 1);
-        const isActive = breathingIn
-          ? progress >= ringProgress
-          : progress <= ringProgress;
+        const isActive =
+          i > 0 &&
+          i < numRings - 1 && // Exclude top and bottom rings
+          (breathingIn ? progress >= ringProgress : progress <= ringProgress);
 
         return (
           <Torus
@@ -71,7 +74,15 @@ function Rings({ breathingIn, progress }) {
             rotation={[Math.PI / 2, 0, 0]}
           >
             <meshStandardMaterial
-              color={isActive ? (breathingIn ? "blue" : "red") : "#fff5e4"}
+              color={
+                i > 0 && i < glowingRings + 1 // Only glow inner rings
+                  ? isActive
+                    ? breathingIn
+                      ? "blue"
+                      : "red"
+                    : "#fff5e4"
+                  : "#fff5e4" // Top and bottom rings stay neutral
+              }
             />
           </Torus>
         );
@@ -212,7 +223,7 @@ function App() {
 
   return (
     <Canvas camera={{ position: [0, 0, 8] }}>
-      <OrbitControls autoRotate autoRotateSpeed={0.05} />
+      <OrbitControls autoRotate autoRotateSpeed={0.05} enablePan={false} />
       <Stars
         radius={150}
         depth={50}
