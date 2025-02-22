@@ -1,14 +1,30 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars, Cylinder, Torus, Html } from "@react-three/drei";
-import { Physics } from "@react-three/cannon";
+import { Physics, useSphere, useCylinder } from "@react-three/cannon";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import { Color, InstancedMesh } from "three";
+
 import "./styles.css";
 
 const inhaleDuration = 4; // Seconds
 const exhaleDuration = 8;
 const totalBreathTime = 5 * 60; // 5 minutes
+
+function generateRandomPointsWithinCircle(radius, numPoints, yPosition) {
+  const points = [];
+
+  for (let i = 0; i < numPoints; i++) {
+    const randomRadius = Math.random() * radius; // Random radius between 0 and 1.5
+    const angle = Math.random() * 2 * Math.PI; // Random angle around the circle
+    const x = randomRadius * Math.cos(angle); // x position based on random radius
+    const z = randomRadius * Math.sin(angle); // z position based on random radius
+    points.push([x, yPosition, z]); // Keep y constant for height
+  }
+
+  return points;
+}
 
 function BreathingTube({ breathingIn }) {
   const tubeMaterial = useRef();
@@ -18,6 +34,12 @@ function BreathingTube({ breathingIn }) {
     const glowColor = breathingIn ? [0, 0, 30 + t * 50] : [10 + t * 50, 0, 0];
     tubeMaterial.current.emissive.setRGB(...glowColor);
   });
+
+  useCylinder(() => ({
+    args: [1, 1, 0.1, 32], // Ensures solid collision at bottom
+    position: [0, 0, 0],
+    type: "Static",
+  }));
 
   return (
     <Cylinder args={[1, 1, 5, 32]} position={[0, 0, 0]}>
@@ -53,6 +75,54 @@ function BreathingText({ breathingIn, isMobile }) {
   );
 }
 
+function InstancedSpheres({
+  number = 100,
+  radius = 1.5,
+  yPosition,
+  breatheIn,
+}) {
+  const positions = useMemo(
+    () => generateRandomPointsWithinCircle(radius, number, yPosition),
+    [number, radius]
+  );
+
+  const [ref] = useSphere(
+    (index) => ({
+      args: [0.07],
+      mass: 0.000001,
+      position: positions[index],
+    }),
+    useRef < InstancedMesh > null
+  );
+  const colors = useMemo(() => {
+    const array = new Float32Array(number * 3);
+    const color = new Color();
+    for (let i = 0; i < number; i++)
+      color
+        .set(breatheIn ? "blue" : "red")
+        .convertSRGBToLinear()
+        .toArray(array, i * 3);
+    return array;
+  }, [number]);
+
+  return (
+    <instancedMesh
+      ref={ref}
+      castShadow
+      receiveShadow
+      args={[undefined, undefined, number]}
+    >
+      <sphereGeometry args={[0.07, 16, 16]}>
+        <instancedBufferAttribute
+          attach="attributes-color"
+          args={[colors, 3]}
+        />
+      </sphereGeometry>
+      <meshPhongMaterial vertexColors />
+    </instancedMesh>
+  );
+}
+
 function Rings({ breathingIn, progress }) {
   const numRings = breathingIn ? 6 : 10; // Total rings (2 extra neutral rings)
   const glowingRings = breathingIn ? 4 : 8; // Inner rings that glow
@@ -67,24 +137,42 @@ function Rings({ breathingIn, progress }) {
           (breathingIn ? progress >= ringProgress : progress <= ringProgress);
 
         return (
-          <Torus
-            key={i}
-            args={[1.1, 0.05, 16, 32]}
-            position={[0, -2.5 + (i * 5) / (numRings - 1), 0]}
-            rotation={[Math.PI / 2, 0, 0]}
-          >
-            <meshStandardMaterial
-              color={
-                i > 0 && i < glowingRings + 1 // Only glow inner rings
-                  ? isActive
-                    ? breathingIn
-                      ? "blue"
-                      : "red"
-                    : "#fff5e4"
-                  : "#fff5e4" // Top and bottom rings stay neutral
-              }
-            />
-          </Torus>
+          <>
+            <Torus
+              key={i}
+              args={[1.1, 0.05, 16, 32]}
+              position={[0, -2.5 + (i * 5) / (numRings - 1), 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+            >
+              <meshStandardMaterial
+                color={
+                  i > 0 && i < glowingRings + 1 // Only glow inner rings
+                    ? isActive
+                      ? breathingIn
+                        ? "blue"
+                        : "red"
+                      : "#fff5e4"
+                    : "#fff5e4" // Top and bottom rings stay neutral
+                }
+              />
+            </Torus>
+            {breathingIn && (
+              <InstancedSpheres
+                number={10}
+                radius={1}
+                yPosition={-2.5 + (i * 5) / (numRings - 1)}
+                breatheIn={breathingIn}
+              />
+            )}
+            {!breathingIn && (
+              <InstancedSpheres
+                number={10}
+                radius={1}
+                yPosition={-2.5 + (i * 5) / (numRings - 1)}
+                breatheIn={breathingIn}
+              />
+            )}
+          </>
         );
       })}
     </>
@@ -236,7 +324,7 @@ function App() {
       <spotLight position={[10, 15, 10]} angle={0.3} />
       <pointLight position={[10, 10, 10]} />
 
-      <Physics>
+      <Physics gravity={[0, -0.1, 0]}>
         <Breathingrings isRunning={isRunning} setIsRunning={setIsRunning} />
       </Physics>
 
