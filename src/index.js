@@ -273,7 +273,7 @@ function Breathingrings({ isRunning, setIsRunning }) {
   }, [remainingTime, setIsRunning]);
 
   return (
-    <>
+    <Physics gravity={[0, breathingIn ? 0.1 : -0.1, 0]}>
       {isRunning && <BreathingTube breathingIn={breathingIn} />}
       {isRunning && <Rings breathingIn={breathingIn} progress={progress} />}
       {isRunning && (
@@ -302,7 +302,7 @@ function Breathingrings({ isRunning, setIsRunning }) {
           </button>
         </Html>
       )}
-    </>
+    </Physics>
   );
 }
 
@@ -324,9 +324,7 @@ function App() {
       <spotLight position={[10, 15, 10]} angle={0.3} />
       <pointLight position={[10, 10, 10]} />
 
-      <Physics gravity={[0, -0.1, 0]}>
-        <Breathingrings isRunning={isRunning} setIsRunning={setIsRunning} />
-      </Physics>
+      <Breathingrings isRunning={isRunning} setIsRunning={setIsRunning} />
 
       <EffectComposer>
         <Bloom
