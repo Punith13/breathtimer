@@ -193,7 +193,7 @@ function Timer({ remainingTime, isMobile }) {
           backgroundColor: "rgba(0, 0, 0, 0.5)",
           padding: "10px 20px",
           borderRadius: "10px",
-          width: "150px",
+          width: isMobile ? "120px" : "150px",
         }}
       >
         <svg width="80" height="80" viewBox="0 0 100 100">
