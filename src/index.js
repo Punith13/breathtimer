@@ -273,7 +273,7 @@ function Breathingrings({ isRunning, setIsRunning }) {
   }, [remainingTime, setIsRunning]);
 
   return (
-    <Physics gravity={[0, breathingIn ? 0.1 : -0.1, 0]}>
+    <Physics gravity={[0, breathingIn ? 0.3 : -0.1, 0]}>
       {isRunning && <BreathingTube breathingIn={breathingIn} />}
       {isRunning && <Rings breathingIn={breathingIn} progress={progress} />}
       {isRunning && (
