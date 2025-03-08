@@ -276,9 +276,9 @@ function Breathingrings({ isRunning, setIsRunning }) {
     <Physics gravity={[0, breathingIn ? 0.3 : -0.1, 0]}>
       {isRunning && <BreathingTube breathingIn={breathingIn} />}
       {isRunning && <Rings breathingIn={breathingIn} progress={progress} />}
-      {isRunning && (
+      {/* {isRunning && (
         <BreathingText breathingIn={breathingIn} isMobile={isMobile} />
-      )}
+      )} */}
       {isRunning && <Timer remainingTime={remainingTime} isMobile={isMobile} />}
       {!isRunning && (
         <Html position={[0, 0, 0]} center>
