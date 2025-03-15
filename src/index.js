@@ -105,11 +105,10 @@ function BreathingText({ breathPhase, isMobile, breathingConfig }) {
         <div
           style={{
             fontSize: isMobile ? "1.2rem" : "2rem",
-            fontWeight: "bold",
+            fontWeight: isMobile ? "300" : "bold",
             color: "white",
             backgroundColor: "rgba(0, 0, 0, 0.5)",
-
-            borderRadius: "10px",
+            textAlign: "center",
           }}
         >
           {capitalizeFirstLetter(breathPhase)}
@@ -125,12 +124,11 @@ function BreathingModeText({ breathMode, isMobile }) {
       <div
         style={{
           fontSize: isMobile ? "1rem" : "1.5rem",
-          fontWeight: "bold",
+          fontWeight: isMobile ? "300" : "bold",
           color: "white",
           backgroundColor: "rgba(0, 0, 0, 0.5)",
           width: "300px",
           textAlign: "center",
-          borderRadius: "10px",
         }}
       >
         {capitalizeFirstLetter(breathMode)}
@@ -275,7 +273,7 @@ function Timer({ remainingTime, isMobile, totalDuration }) {
           width: isMobile ? "120px" : "150px",
         }}
       >
-        <svg width="80" height="80" viewBox="0 0 100 100">
+        <svg width="60" height="60" viewBox="0 0 100 100">
           <circle
             cx="50"
             cy="50"
@@ -392,9 +390,12 @@ function Breathingrings({
         <BreathingText
           breathPhase={breathPhase}
           breathingConfig={breathingConfig}
+          isMobile={isMobile}
         />
       )}
-      {isRunning && <BreathingModeText breathMode={breathMode} />}
+      {isRunning && (
+        <BreathingModeText breathMode={breathMode} isMobile={isMobile} />
+      )}
 
       {!isRunning && !menuOpen && (
         <Html position={[0, 0, 0]} center>
