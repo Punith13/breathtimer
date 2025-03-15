@@ -479,7 +479,7 @@ function App() {
       holdDuration: 7,
       pauseDuration: 0,
       breathMode: "Release Negativity Mode",
-      totalDuration: 10,
+      totalDuration: 10 * 60,
     },
     blissMode: {
       inhaleDuration: 5,
