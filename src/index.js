@@ -81,7 +81,7 @@ function BreathingTube({ breathingIn }) {
   );
 }
 
-function BreathingText({ breathPhase, isMobile }) {
+function BreathingText({ breathPhase, isMobile, breathingConfig }) {
   const xLookUp = {
     inhale: -2,
     hold: 2,
@@ -89,21 +89,33 @@ function BreathingText({ breathPhase, isMobile }) {
     pause: 2,
   };
 
-  return (
-    <Html position={[xLookUp[breathPhase], 0, 0]} center>
-      <div
-        style={{
-          fontSize: isMobile ? "1.2rem" : "2rem",
-          fontWeight: "bold",
-          color: "white",
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
+  const { inhaleDuration, exhaleDuration, holdDuration, pauseDuration } =
+    breathingConfig;
 
-          borderRadius: "10px",
-        }}
-      >
-        {capitalizeFirstLetter(breathPhase)}
-      </div>
-    </Html>
+  const showTextLookup = {
+    inhale: inhaleDuration > 0,
+    hold: holdDuration > 0,
+    exhale: exhaleDuration > 0,
+    pause: pauseDuration > 0,
+  };
+
+  return (
+    showTextLookup[breathPhase] && (
+      <Html position={[xLookUp[breathPhase], 0, 0]} center>
+        <div
+          style={{
+            fontSize: isMobile ? "1.2rem" : "2rem",
+            fontWeight: "bold",
+            color: "white",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+
+            borderRadius: "10px",
+          }}
+        >
+          {capitalizeFirstLetter(breathPhase)}
+        </div>
+      </Html>
+    )
   );
 }
 
@@ -348,7 +360,12 @@ function Breathingrings({
         />
       )}
       {isRunning && <Timer remainingTime={remainingTime} isMobile={isMobile} />}
-      {isRunning && <BreathingText breathPhase={breathPhase} />}
+      {isRunning && (
+        <BreathingText
+          breathPhase={breathPhase}
+          breathingConfig={breathingConfig}
+        />
+      )}
 
       {!isRunning && !menuOpen && (
         <Html position={[0, 0, 0]} center>
@@ -416,10 +433,17 @@ function App() {
     },
     ReleaseNeg: {
       inhaleDuration: 4,
-      exhaleDuration: 7,
-      holdDuration: 8,
+      exhaleDuration: 8,
+      holdDuration: 7,
       pauseDuration: 0,
       breathMode: "Release Negativity Mode",
+    },
+    blissMode: {
+      inhaleDuration: 5,
+      exhaleDuration: 10,
+      holdDuration: 5,
+      pauseDuration: 0,
+      breathMode: "Bliss Mode",
     },
     boxBreathing: {
       inhaleDuration: 6,
@@ -486,6 +510,9 @@ function App() {
               </button>
               <button onClick={() => loadPreset("boxBreathing")}>
                 Steady Mind
+              </button>
+              <button onClick={() => loadPreset("blissMode")}>
+                Bliss Mode
               </button>
               <button onClick={() => setMenuOpen(false)}>Close</button>
             </div>
