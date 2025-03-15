@@ -8,19 +8,38 @@ import { Color, InstancedMesh } from "three";
 
 import "./styles.css";
 
-const inhaleDuration = 4; // Seconds
-const exhaleDuration = 8;
-const totalBreathTime = 5 * 60; // 5 minutes
+const inhaleDuration = 5; // Seconds
+const holdDuration = 5; // Hold after inhale
+const exhaleDuration = 7; // Seconds
+const pauseDuration = 5; // Pause after exhale
+const totalBreathTime = 10 * 60; // 5 minutes
 
-function generateRandomPointsWithinCircle(radius, numPoints, yPosition) {
+// function generateRandomPointsWithinCircle(radius, numPoints, yPosition) {
+//   const points = [];
+
+//   for (let i = 0; i < numPoints; i++) {
+//     const randomRadius = Math.random() * radius; // Random radius between 0 and 1.5
+//     const angle = Math.random() * 2 * Math.PI; // Random angle around the circle
+//     const x = randomRadius * Math.cos(angle); // x position based on random radius
+//     const z = randomRadius * Math.sin(angle); // z position based on random radius
+//     points.push([x, yPosition, z]); // Keep y constant for height
+//   }
+
+//   return points;
+// }
+
+function generateSpiralPoints(radius, numPoints, yPosition) {
   const points = [];
+  const turns = 2; // Number of spiral turns
 
-  for (let i = 0; i < numPoints; i++) {
-    const randomRadius = Math.random() * radius; // Random radius between 0 and 1.5
-    const angle = Math.random() * 2 * Math.PI; // Random angle around the circle
-    const x = randomRadius * Math.cos(angle); // x position based on random radius
-    const z = randomRadius * Math.sin(angle); // z position based on random radius
-    points.push([x, yPosition, z]); // Keep y constant for height
+  for (let i = 3; i < numPoints; i++) {
+    const angle = (i / numPoints) * (turns * Math.PI * 2); // Gradually increasing angle
+    const r = radius * (i / numPoints); // Gradually increasing radius
+    const x = r * Math.cos(angle);
+    const z = r * Math.sin(angle);
+    const y = yPosition; // Keep y constant for a flat spiral
+
+    points.push([x, y, z]);
   }
 
   return points;
@@ -35,14 +54,16 @@ function BreathingTube({ breathingIn }) {
     tubeMaterial.current.emissive.setRGB(...glowColor);
   });
 
-  useCylinder(() => ({
-    args: [1, 1, 0.1, 32], // Ensures solid collision at bottom
+  // Set the cylinder physics properties for solid walls (excluding top/bottom)
+  const [ref] = useCylinder(() => ({
+    args: [1, 1, 5, 32, 1, true], // args: [radiusTop, radiusBottom, height, radialSegments, heightSegments, openEnded]
     position: [0, 0, 0],
+    mass: 0,
     type: "Static",
   }));
 
   return (
-    <Cylinder args={[1, 1, 5, 32]} position={[0, 0, 0]}>
+    <Cylinder ref={ref} args={[1, 1, 5, 32, true]} position={[0, 0, 0]}>
       <meshStandardMaterial
         ref={tubeMaterial}
         emissiveIntensity={1}
@@ -82,14 +103,14 @@ function InstancedSpheres({
   breatheIn,
 }) {
   const positions = useMemo(
-    () => generateRandomPointsWithinCircle(radius, number, yPosition),
+    () => generateSpiralPoints(radius, number, yPosition),
     [number, radius]
   );
 
   const [ref] = useSphere(
     (index) => ({
       args: [0.07],
-      mass: 0.000001,
+      mass: 0.1,
       position: positions[index],
     }),
     useRef < InstancedMesh > null
@@ -123,18 +144,31 @@ function InstancedSpheres({
   );
 }
 
-function Rings({ breathingIn, progress }) {
-  const numRings = breathingIn ? 6 : 10; // Total rings (2 extra neutral rings)
-  const glowingRings = breathingIn ? 4 : 8; // Inner rings that glow
+function Rings({ breathPhase, progress }) {
+  const breathInPhase = breathPhase === "inhale";
+  const breathOutPhase = breathPhase === "exhale";
+  const breathingIn = breathPhase === "hold" || breathPhase === "inhale";
+
+  const numRings = breathingIn ? inhaleDuration + 2 : exhaleDuration + 2; // Total rings (2 extra neutral rings)
+  const glowingRings = breathingIn ? inhaleDuration : exhaleDuration; // Inner rings that glow
+
+  const isHold = breathPhase === "hold";
+  const isPause = breathPhase === "pause";
+
+  // Determine if the rings should glow for the hold and pause phase
+  const glowAllRings = isHold || isPause;
 
   return (
     <>
       {[...Array(numRings)].map((_, i) => {
         const ringProgress = i / (numRings - 1);
         const isActive =
-          i > 0 &&
-          i < numRings - 1 && // Exclude top and bottom rings
-          (breathingIn ? progress >= ringProgress : progress <= ringProgress);
+          glowAllRings || // If it's hold or pause, make all rings glow
+          (i > 0 &&
+            i < numRings - 1 && // Exclude top and bottom rings
+            (breathingIn
+              ? progress >= ringProgress
+              : progress <= ringProgress));
 
         return (
           <>
@@ -156,18 +190,18 @@ function Rings({ breathingIn, progress }) {
                 }
               />
             </Torus>
-            {breathingIn && (
+            {breathInPhase && (
               <InstancedSpheres
                 number={10}
-                radius={1}
+                radius={0.9}
                 yPosition={-2.5 + (i * 5) / (numRings - 1)}
                 breatheIn={breathingIn}
               />
             )}
-            {!breathingIn && (
+            {breathOutPhase && (
               <InstancedSpheres
                 number={10}
-                radius={1}
+                radius={0.9}
                 yPosition={-2.5 + (i * 5) / (numRings - 1)}
                 breatheIn={breathingIn}
               />
@@ -227,7 +261,7 @@ function Timer({ remainingTime, isMobile }) {
 }
 
 function Breathingrings({ isRunning, setIsRunning }) {
-  const [breathingIn, setBreathingIn] = useState(true);
+  const [breathPhase, setBreathPhase] = useState("inhale"); // inhale, hold, exhale, pause
   const [progress, setProgress] = useState(0);
   const [remainingTime, setRemainingTime] = useState(totalBreathTime);
   const elapsedRef = useRef(0);
@@ -255,15 +289,32 @@ function Breathingrings({ isRunning, setIsRunning }) {
     elapsedRef.current += delta;
     setRemainingTime((prev) => Math.max(prev - delta, 0));
 
-    let phaseDuration = breathingIn ? inhaleDuration : exhaleDuration;
+    let phaseDuration =
+      breathPhase === "inhale"
+        ? inhaleDuration
+        : breathPhase === "hold"
+        ? holdDuration
+        : breathPhase === "exhale"
+        ? exhaleDuration
+        : pauseDuration;
+
     let normalizedTime = elapsedRef.current / phaseDuration;
 
     if (normalizedTime >= 1) {
       elapsedRef.current = 0;
-      setBreathingIn(!breathingIn);
+      setBreathPhase((prev) => {
+        if (prev === "inhale") return "hold";
+        if (prev === "hold") return "exhale";
+        if (prev === "exhale") return "pause";
+        return "inhale";
+      });
     }
 
-    setProgress(breathingIn ? normalizedTime : 1 - normalizedTime);
+    setProgress(
+      breathPhase === "inhale" || breathPhase === "hold"
+        ? normalizedTime
+        : 1 - normalizedTime
+    );
   });
 
   useEffect(() => {
@@ -273,12 +324,13 @@ function Breathingrings({ isRunning, setIsRunning }) {
   }, [remainingTime, setIsRunning]);
 
   return (
-    <Physics gravity={[0, breathingIn ? 0.3 : -0.1, 0]}>
-      {isRunning && <BreathingTube breathingIn={breathingIn} />}
-      {isRunning && <Rings breathingIn={breathingIn} progress={progress} />}
-      {/* {isRunning && (
-        <BreathingText breathingIn={breathingIn} isMobile={isMobile} />
-      )} */}
+    <Physics gravity={[0, breathPhase === "exhale" ? -0.2 : 0.3, 0]}>
+      {isRunning && (
+        <BreathingTube
+          breathingIn={breathPhase !== "exhale" && breathPhase !== "pause"}
+        />
+      )}
+      {isRunning && <Rings breathPhase={breathPhase} progress={progress} />}
       {isRunning && <Timer remainingTime={remainingTime} isMobile={isMobile} />}
       {!isRunning && (
         <Html position={[0, 0, 0]} center>
