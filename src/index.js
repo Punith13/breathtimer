@@ -119,6 +119,26 @@ function BreathingText({ breathPhase, isMobile, breathingConfig }) {
   );
 }
 
+function BreathingModeText({ breathMode, isMobile }) {
+  return (
+    <Html position={[-0.1, 5.8, 0]} center>
+      <div
+        style={{
+          fontSize: isMobile ? "1rem" : "1.5rem",
+          fontWeight: "bold",
+          color: "white",
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          width: "300px",
+          textAlign: "center",
+          borderRadius: "10px",
+        }}
+      >
+        {capitalizeFirstLetter(breathMode)}
+      </div>
+    </Html>
+  );
+}
+
 function InstancedSpheres({
   number = 100,
   radius = 1.5,
@@ -238,9 +258,9 @@ function Rings({ breathPhase, progress, breathingConfig }) {
   );
 }
 
-function Timer({ remainingTime, isMobile }) {
+function Timer({ remainingTime, isMobile, totalDuration }) {
   return (
-    <Html position={[isMobile ? -0.1 : -0.2, 5, 0]} center>
+    <Html position={[isMobile ? -0.1 : -0.2, 4.8, 0]} center>
       <div
         style={{
           display: "flex",
@@ -272,7 +292,7 @@ function Timer({ remainingTime, isMobile }) {
             strokeWidth={isMobile ? "7" : "5"}
             fill="none"
             strokeDasharray="282.7"
-            strokeDashoffset={(remainingTime / totalBreathTime) * 282.7}
+            strokeDashoffset={(remainingTime / totalDuration) * 282.7}
             transform="rotate(-90 50 50)"
           />
         </svg>
@@ -294,8 +314,6 @@ function Breathingrings({
 }) {
   const [breathPhase, setBreathPhase] = useState("inhale"); // inhale, hold, exhale, pause
   const [progress, setProgress] = useState(0);
-  const [remainingTime, setRemainingTime] = useState(totalBreathTime);
-  const elapsedRef = useRef(0);
 
   const {
     inhaleDuration,
@@ -303,7 +321,11 @@ function Breathingrings({
     holdDuration,
     pauseDuration,
     breathMode,
+    totalDuration,
   } = breathingConfig;
+
+  const [remainingTime, setRemainingTime] = useState(totalDuration);
+  const elapsedRef = useRef(0);
 
   useFrame((_, delta) => {
     if (!isRunning || remainingTime <= 0) return;
@@ -359,19 +381,26 @@ function Breathingrings({
           breathingConfig={breathingConfig}
         />
       )}
-      {isRunning && <Timer remainingTime={remainingTime} isMobile={isMobile} />}
+      {isRunning && (
+        <Timer
+          remainingTime={remainingTime}
+          isMobile={isMobile}
+          totalDuration={totalDuration}
+        />
+      )}
       {isRunning && (
         <BreathingText
           breathPhase={breathPhase}
           breathingConfig={breathingConfig}
         />
       )}
+      {isRunning && <BreathingModeText breathMode={breathMode} />}
 
       {!isRunning && !menuOpen && (
         <Html position={[0, 0, 0]} center>
           <button
             onClick={() => {
-              setRemainingTime(totalBreathTime);
+              setRemainingTime(totalDuration);
               setIsRunning(true);
             }}
             style={{
@@ -407,29 +436,41 @@ function App() {
     holdDuration: 2,
     pauseDuration: 2,
     breathMode: "Breathing",
+    totalDuration: 5 * 60,
   });
 
   const presets = {
-    Relax: {
+    feelGood: {
       inhaleDuration: 4,
       exhaleDuration: 6,
-      holdDuration: 2,
+      holdDuration: 4,
       pauseDuration: 2,
+      breathMode: "Feel Good Mode",
+      totalDuration: 10 * 60,
+    },
+    Relax: {
+      inhaleDuration: 4,
+      exhaleDuration: 8,
+      holdDuration: 6,
+      pauseDuration: 4,
       breathMode: "Relax Mode",
+      totalDuration: 10 * 60,
     },
     Focus: {
-      inhaleDuration: 5,
-      exhaleDuration: 5,
-      holdDuration: 3,
-      pauseDuration: 3,
+      inhaleDuration: 2,
+      exhaleDuration: 6,
+      holdDuration: 4,
+      pauseDuration: 0,
       breathMode: "Focus Mode",
+      totalDuration: 5 * 60,
     },
     Energize: {
-      inhaleDuration: 6,
+      inhaleDuration: 3,
       exhaleDuration: 6,
-      holdDuration: 2,
-      pauseDuration: 1,
+      holdDuration: 1,
+      pauseDuration: 0,
       breathMode: "Energise Mode",
+      totalDuration: 5 * 60,
     },
     ReleaseNeg: {
       inhaleDuration: 4,
@@ -437,6 +478,7 @@ function App() {
       holdDuration: 7,
       pauseDuration: 0,
       breathMode: "Release Negativity Mode",
+      totalDuration: 10,
     },
     blissMode: {
       inhaleDuration: 5,
@@ -444,6 +486,7 @@ function App() {
       holdDuration: 5,
       pauseDuration: 0,
       breathMode: "Bliss Mode",
+      totalDuration: 10 * 60,
     },
     boxBreathing: {
       inhaleDuration: 6,
@@ -451,6 +494,7 @@ function App() {
       holdDuration: 6,
       pauseDuration: 6,
       breathMode: "Steady Mind Mode",
+      totalDuration: 10 * 60,
     },
   };
 
@@ -500,6 +544,13 @@ function App() {
                 }}
               >
                 Relax Mode
+              </button>
+              <button
+                onClick={() => {
+                  loadPreset("feelGood");
+                }}
+              >
+                Feel Good Mode
               </button>
               <button onClick={() => loadPreset("Focus")}>Focus Mode</button>
               <button onClick={() => loadPreset("Energize")}>
