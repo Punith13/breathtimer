@@ -23,3 +23,27 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto,
     segoe ui, arial, sans-serif;
 }
+
+
+.menu-icon {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 24px;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.settings-panel {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+}
+.settings-panel button {
+  display: block;
+  width: 100%;
+  margin: 5px 0;
+}

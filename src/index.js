@@ -8,10 +8,10 @@ import { Color, InstancedMesh } from "three";
 
 import "./styles.css";
 
-const inhaleDuration = 5; // Seconds
-const holdDuration = 5; // Hold after inhale
-const exhaleDuration = 7; // Seconds
-const pauseDuration = 5; // Pause after exhale
+// const inhaleDuration = 5; // Seconds
+// const holdDuration = 5; // Hold after inhale
+// const exhaleDuration = 7; // Seconds
+// const pauseDuration = 5; // Pause after exhale
 const totalBreathTime = 10 * 60; // 5 minutes
 
 // function generateRandomPointsWithinCircle(radius, numPoints, yPosition) {
@@ -27,6 +27,11 @@ const totalBreathTime = 10 * 60; // 5 minutes
 
 //   return points;
 // }
+
+function capitalizeFirstLetter(str) {
+  if (!str) return ""; // Handle empty strings
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 function generateSpiralPoints(radius, numPoints, yPosition) {
   const points = [];
@@ -76,21 +81,27 @@ function BreathingTube({ breathingIn }) {
   );
 }
 
-function BreathingText({ breathingIn, isMobile }) {
+function BreathingText({ breathPhase, isMobile }) {
+  const xLookUp = {
+    inhale: -2,
+    hold: 2,
+    exhale: -2,
+    pause: 2,
+  };
+
   return (
-    <Html position={[isMobile ? 0.9 : 0, 3.5, 0]} center>
+    <Html position={[xLookUp[breathPhase], 0, 0]} center>
       <div
         style={{
           fontSize: isMobile ? "1.2rem" : "2rem",
           fontWeight: "bold",
           color: "white",
           backgroundColor: "rgba(0, 0, 0, 0.5)",
-          padding: "10px 20px",
-          width: "250px",
+
           borderRadius: "10px",
         }}
       >
-        {breathingIn ? "Breathe In" : "Breathe Out"}
+        {capitalizeFirstLetter(breathPhase)}
       </div>
     </Html>
   );
@@ -144,10 +155,12 @@ function InstancedSpheres({
   );
 }
 
-function Rings({ breathPhase, progress }) {
+function Rings({ breathPhase, progress, breathingConfig }) {
   const breathInPhase = breathPhase === "inhale";
   const breathOutPhase = breathPhase === "exhale";
   const breathingIn = breathPhase === "hold" || breathPhase === "inhale";
+
+  const { inhaleDuration, exhaleDuration } = breathingConfig;
 
   const numRings = breathingIn ? inhaleDuration + 2 : exhaleDuration + 2; // Total rings (2 extra neutral rings)
   const glowingRings = breathingIn ? inhaleDuration : exhaleDuration; // Inner rings that glow
@@ -190,7 +203,7 @@ function Rings({ breathPhase, progress }) {
                 }
               />
             </Torus>
-            {breathInPhase && (
+            {breathInPhase && i > 0 && i < numRings - 1 && (
               <InstancedSpheres
                 number={10}
                 radius={0.9}
@@ -198,7 +211,7 @@ function Rings({ breathPhase, progress }) {
                 breatheIn={breathingIn}
               />
             )}
-            {breathOutPhase && (
+            {breathOutPhase && i > 0 && i < numRings - 1 && (
               <InstancedSpheres
                 number={10}
                 radius={0.9}
@@ -260,28 +273,25 @@ function Timer({ remainingTime, isMobile }) {
   );
 }
 
-function Breathingrings({ isRunning, setIsRunning }) {
+function Breathingrings({
+  isRunning,
+  setIsRunning,
+  breathingConfig,
+  isMobile,
+  menuOpen,
+}) {
   const [breathPhase, setBreathPhase] = useState("inhale"); // inhale, hold, exhale, pause
   const [progress, setProgress] = useState(0);
   const [remainingTime, setRemainingTime] = useState(totalBreathTime);
   const elapsedRef = useRef(0);
 
-  const [isMobile, setIsMobile] = useState(false); // Mobile detection state
-
-  // Detect if the user is on a mobile screen
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth <= 768) {
-        // Mobile threshold
-        setIsMobile(true);
-      } else {
-        setIsMobile(false);
-      }
-    };
-    handleResize(); // Initial check
-    window.addEventListener("resize", handleResize); // Event listener for resizing
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const {
+    inhaleDuration,
+    exhaleDuration,
+    holdDuration,
+    pauseDuration,
+    breathMode,
+  } = breathingConfig;
 
   useFrame((_, delta) => {
     if (!isRunning || remainingTime <= 0) return;
@@ -330,9 +340,17 @@ function Breathingrings({ isRunning, setIsRunning }) {
           breathingIn={breathPhase !== "exhale" && breathPhase !== "pause"}
         />
       )}
-      {isRunning && <Rings breathPhase={breathPhase} progress={progress} />}
+      {isRunning && (
+        <Rings
+          breathPhase={breathPhase}
+          progress={progress}
+          breathingConfig={breathingConfig}
+        />
+      )}
       {isRunning && <Timer remainingTime={remainingTime} isMobile={isMobile} />}
-      {!isRunning && (
+      {isRunning && <BreathingText breathPhase={breathPhase} />}
+
+      {!isRunning && !menuOpen && (
         <Html position={[0, 0, 0]} center>
           <button
             onClick={() => {
@@ -348,9 +366,10 @@ function Breathingrings({ isRunning, setIsRunning }) {
               border: "none",
               borderRadius: "10px",
               cursor: "pointer",
+              width: "200px",
             }}
           >
-            Start Breathing
+            {`Start ${breathMode}`}
           </button>
         </Html>
       )}
@@ -361,32 +380,143 @@ function Breathingrings({ isRunning, setIsRunning }) {
 function App() {
   const [isRunning, setIsRunning] = useState(false);
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(false); // Mobile detection state
+
+  const [breathingConfig, setBreathingConfig] = useState({
+    inhaleDuration: 4,
+    exhaleDuration: 6,
+    holdDuration: 2,
+    pauseDuration: 2,
+    breathMode: "Breathing",
+  });
+
+  const presets = {
+    Relax: {
+      inhaleDuration: 4,
+      exhaleDuration: 6,
+      holdDuration: 2,
+      pauseDuration: 2,
+      breathMode: "Relax Mode",
+    },
+    Focus: {
+      inhaleDuration: 5,
+      exhaleDuration: 5,
+      holdDuration: 3,
+      pauseDuration: 3,
+      breathMode: "Focus Mode",
+    },
+    Energize: {
+      inhaleDuration: 6,
+      exhaleDuration: 6,
+      holdDuration: 2,
+      pauseDuration: 1,
+      breathMode: "Energise Mode",
+    },
+    ReleaseNeg: {
+      inhaleDuration: 4,
+      exhaleDuration: 7,
+      holdDuration: 8,
+      pauseDuration: 0,
+      breathMode: "Release Negativity Mode",
+    },
+    boxBreathing: {
+      inhaleDuration: 6,
+      exhaleDuration: 6,
+      holdDuration: 6,
+      pauseDuration: 6,
+      breathMode: "Steady Mind Mode",
+    },
+  };
+
+  function loadPreset(mode) {
+    setBreathingConfig(presets[mode]);
+    setMenuOpen(false); // Close menu after selection
+  }
+
+  // Detect if the user is on a mobile screen
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) {
+        // Mobile threshold
+        setIsMobile(true);
+      } else {
+        setIsMobile(false);
+      }
+    };
+    handleResize(); // Initial check
+    window.addEventListener("resize", handleResize); // Event listener for resizing
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
-    <Canvas camera={{ position: [0, 0, 8] }}>
-      <OrbitControls autoRotate autoRotateSpeed={0.05} enablePan={false} />
-      <Stars
-        radius={150}
-        depth={50}
-        count={5000}
-        factor={2}
-        saturation={9}
-        speed={1}
-      />
-      <ambientLight intensity={2} />
-      <spotLight position={[10, 15, 10]} angle={0.3} />
-      <pointLight position={[10, 10, 10]} />
-
-      <Breathingrings isRunning={isRunning} setIsRunning={setIsRunning} />
-
-      <EffectComposer>
-        <Bloom
-          mipmapBlur={false}
-          luminanceThreshold={1}
-          luminanceSmoothing={0.5}
-          intensity={1.2}
+    <>
+      <Canvas camera={{ position: [0, 0, 8] }}>
+        <OrbitControls autoRotate={false} enablePan={false} />
+        <Stars
+          radius={150}
+          depth={50}
+          count={5000}
+          factor={2}
+          saturation={9}
+          speed={1}
         />
-      </EffectComposer>
-    </Canvas>
+        <ambientLight intensity={2} />
+        <spotLight position={[10, 15, 10]} angle={0.3} />
+        <pointLight position={[10, 10, 10]} />
+
+        {menuOpen && (
+          <Html position={[isMobile ? -0.5 : 8, 4, 0]}>
+            <div className="settings-panel">
+              <h3>Load a Breathing Pattern</h3>
+              <button
+                onClick={() => {
+                  loadPreset("Relax");
+                }}
+              >
+                Relax Mode
+              </button>
+              <button onClick={() => loadPreset("Focus")}>Focus Mode</button>
+              <button onClick={() => loadPreset("Energize")}>
+                Energize Mode
+              </button>
+              <button onClick={() => loadPreset("ReleaseNeg")}>
+                Release Negativity
+              </button>
+              <button onClick={() => loadPreset("boxBreathing")}>
+                Steady Mind
+              </button>
+              <button onClick={() => setMenuOpen(false)}>Close</button>
+            </div>
+          </Html>
+        )}
+
+        {/* R3F UI (Alternative: Placing Menu Inside Canvas) */}
+        {!isRunning && (
+          <Html position={[isMobile ? 0 : 8, 5, 0]}>
+            <button onClick={() => setMenuOpen(true)}>☰</button>
+          </Html>
+        )}
+
+        <Breathingrings
+          isRunning={isRunning}
+          setIsRunning={setIsRunning}
+          breathingConfig={breathingConfig}
+          isMobile={isMobile}
+          menuOpen={menuOpen}
+        />
+
+        <EffectComposer>
+          <Bloom
+            mipmapBlur={false}
+            luminanceThreshold={1}
+            luminanceSmoothing={0.5}
+            intensity={1.2}
+          />
+        </EffectComposer>
+      </Canvas>
+    </>
   );
 }
 
