@@ -84,8 +84,8 @@ function BreathingTube({ breathingIn }) {
 function BreathingText({ breathPhase, isMobile, breathingConfig }) {
   const xLookUp = {
     inhale: -2,
-    hold: 2,
-    exhale: -2,
+    hold: -2,
+    exhale: 2,
     pause: 2,
   };
 
